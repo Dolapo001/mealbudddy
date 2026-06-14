@@ -1,0 +1,54 @@
+/* ============================================================
+   MealBuddy — global tokens + base
+   Canonical palette = the app's indigo theme (migration decision).
+   The marketing landing keeps its own navy/mint surface, scoped
+   to .mb-landing in (marketing)/landing.css.
+   Variable names (--green-*) are kept from the prototype on purpose
+   to avoid a risky global rename; most hold indigo/blue values.
+   ============================================================ */
+
+:root {
+  --green-deep:   #211eaf;
+  --green-mid:    #4c67ed;
+  --green-bright: #383bca;
+  --green-light:  #1d4ebf;
+  --green-pale:   #436fd5;
+  --amber:        #f2a024;
+  --amber-light:  #fdf0d5;
+  --red-warm:     #e05c3a;
+  --cream:        #faf8f3;
+  --text-dark:    #0f2318;
+  --text-mid:     #3a5c47;
+  --text-muted:   #7a9e88;
+  --error:        #e05c3a;
+  --border:       rgba(61, 184, 112, 0.2);
+  --accent-green: #3db870;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--cream);
+  color: var(--text-dark);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Quality floor: respect reduced-motion everywhere. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Visible keyboard focus (added without altering the visual identity). */
+:focus-visible { outline: 2px solid var(--green-bright); outline-offset: 2px; }
+
+/* Framer page-transition wrapper. */
+.mb-page { min-height: 100vh; }
