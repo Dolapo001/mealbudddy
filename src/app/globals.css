@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* ============================================================
    MealBuddy — global tokens + base
    Canonical palette = the app's indigo theme (migration decision).
