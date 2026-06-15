@@ -1,88 +1,110 @@
-# MealBuddy — Frontend (Next.js 15)
+# MealBuddy
 
-Milestone 1 of the prototype → production migration: the Next.js foundation with the
-**landing** and **auth** pages ported pixel-faithfully from the original HTML, the routing
-finally connected (no dead links), and the auth flow wired end-to-end.
+A university meal-recommendation system for students. It collects body metrics,
+computes calorie targets (Mifflin–St Jeor), and serves a weekly plan of real
+Nigerian foods scored against the user's goal and dietary preferences.
 
-## Stack
+This repository implements the **Prototype → Production** migration described in
+`MealBuddyArchitectureBlueprint.md`: a **Next.js 15** frontend and a **Django 5 +
+DRF** backend, replacing the original static-HTML mock.
 
-Next.js 15 (App Router) · TypeScript · Tailwind CSS · Framer Motion · Zustand · Axios ·
-React Hook Form · Zod · Sonner (toasts).
+```
+.
+├── src/                  Next.js 15 frontend (App Router, TS, Tailwind)
+├── middleware.ts         route guard
+├── backend/              Django 5 + DRF API
+├── docker-compose.yml    full local stack (web, worker, beat, postgres, redis, frontend)
+└── Dockerfile            frontend production image
+```
 
-## Run it
+## Quick start
+
+### Option A — frontend only (mock mode, no backend)
+
+The frontend runs standalone with mock data, so you can walk the full journey
+(landing → auth → onboarding → dashboard) immediately.
 
 ```bash
 npm install
-cp .env.example .env.local   # optional until the backend exists
-npm run dev                  # http://localhost:3000
+npm run dev          # http://localhost:3000
 ```
 
-Build / checks:
+### Option B — full stack with Docker
 
 ```bash
-npm run build       # production build (passes; all routes prerender)
-npm run typecheck   # tsc --noEmit
-npm run lint
+docker compose up --build
+# frontend  http://localhost:3000
+# API       http://localhost:8000/api/v1
+# API docs  http://localhost:8000/api/v1/docs
 ```
 
-## What works now
+### Option C — backend locally (without Docker)
 
-- `/` — landing page, faithful port of `layout.html` (scroll-reveal + hero meal toggle preserved).
-- `/auth` — register (2-step) + login, faithful port of `input.html`, now powered by
-  React Hook Form + Zod with the password-strength meter intact.
-- Full journey is clickable: **landing → auth → onboarding → dashboard**.
-- Smooth route transitions (Framer), toast notifications, visible keyboard focus, and
-  reduced-motion support added **without** changing the visual design.
-
-Auth currently runs in **mock mode** (`BACKEND_READY = false` in `src/lib/api.ts`): registering
-or signing in creates a local session so you can walk the flow today. Flipping that flag to the
-real Django endpoints is the M4 task — the store and Axios client are already shaped for it.
-
-## How the design was preserved
-
-Each page's original CSS is ported **verbatim** into a scoped stylesheet
-(`src/app/(marketing)/landing.css`, `src/app/auth/auth.css`) so there is zero visual drift.
-Stylesheets are scoped to a page wrapper (`.mb-landing`, `.mb-auth`) to stop pages bleeding into
-one another. The palette decision from the blueprint is implemented: the **app's indigo theme is
-the canonical token set** (`globals.css` + `tailwind.config.ts`), while the **landing keeps its
-own navy/mint surface**, scoped to `.mb-landing`.
-
-## Project structure
-
-```
-src/
-├── app/
-│   ├── layout.tsx            root: fonts + providers
-│   ├── template.tsx          Framer route transitions
-│   ├── globals.css           canonical indigo tokens + base
-│   ├── (marketing)/page.tsx  landing  (+ landing.css)
-│   ├── auth/page.tsx         auth      (+ auth.css)
-│   └── (app)/                dashboard + onboarding placeholders (full ports in M2)
-├── components/
-│   ├── marketing/LandingInteractions.tsx
-│   └── auth/AuthClient.tsx
-├── lib/        api (axios) · calc (BMI/TDEE) · utils
-├── stores/     auth (Zustand, persisted)
-├── schemas/    auth (Zod)
-└── types/
-middleware.ts   route-guard skeleton (enforced in M4)
+```bash
+cd backend
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements-dev.txt
+python manage.py migrate
+python manage.py seed_foods
+python manage.py runserver          # http://localhost:8000
 ```
 
-## Fidelity notes — preserved as-is, please confirm
+To point the frontend at the real backend, set in `.env.local`:
 
-These look like leftovers in the original prototype. They were kept **exactly** as they render so
-nothing changed silently; flag if you'd like them corrected:
+```
+NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+NEXT_PUBLIC_BACKEND_READY=true
+```
 
-1. The landing's hero CTA buttons and nav menu links are commented out in the source, so they
-   don't render — the only entry point is the nav "Get started".
-2. The landing's primary-button CSS sets **red** text (`#bb2f2f`), and a couple of color values use
-   invalid `(rgb(...))` syntax (so they fall back).
-3. Several landing sections say **"NutriGuide"** instead of "MealBuddy".
-4. The metrics page has a **duplicated goal card** ("Gain muscle" twice; the 4th is "Gain weight").
-   Relevant in M2.
+## Stack
 
-## Next: Milestone 2
+**Frontend:** Next.js 15 (App Router), TypeScript, Tailwind, Framer Motion,
+Zustand, Axios, React Hook Form, Zod, Sonner.
 
-Port the onboarding metrics form (live BMI/TDEE — math already in `src/lib/calc.ts`) and the
-recommendations dashboard (sidebar, weekly plan, food modal, nutrition donut, ML feedback),
-componentised with skeletons, animated counters/charts, and the glassmorphism layer.
+**Backend:** Python 3.13, Django 5, DRF, SimpleJWT, drf-spectacular, PostgreSQL
+(SQLite fallback for dev/test), Redis, Celery, Channels, Docker.
+
+## What's implemented (by milestone)
+
+- **M1 — Frontend foundation.** Landing + auth pages ported pixel-faithfully,
+  routing wired (no dead links), design tokens (canonical indigo theme).
+- **M2 — Onboarding + dashboard.** Live BMI/TDEE metrics form, recommendations
+  dashboard (weekly plan, day tabs, food modal, SVG nutrition donut, star
+  feedback), foods index, history, goal, settings, profile — all componentised
+  with skeletons, toasts, animated counters and Framer transitions.
+- **M3 — Backend foundation.** Django project, split settings, core base models
+  (UUID PK / timestamps / soft-delete), Docker, drf-spectacular docs.
+- **M4 — Auth end-to-end.** Register/login/logout/refresh, signed single-use
+  email verification + password reset, RBAC; frontend wired to real JWT with a
+  route guard.
+- **M5 — Metrics + foods.** Persisted metrics with server-side derivations,
+  seeded NFCT catalogue, searchable/filterable foods index.
+- **M6 — Recommendations.** Pluggable baseline scorer behind
+  `RecommendationService`, plan generation (sync + Celery async), swap/refresh,
+  feedback persisted.
+- **M7 — Realtime + pages.** Django Channels dashboard socket (plan-ready
+  push), history/settings/profile pages.
+- **M8 — Hardening (partial).** Backend test suite at **85%** coverage, Docker
+  compose, API docs; performance/CI passes are the remaining work.
+
+## Tests
+
+```bash
+# backend (pytest, 85% coverage)
+cd backend && source .venv/bin/activate && pytest
+
+# frontend
+npm run typecheck && npm run build
+```
+
+## Design decisions (from the blueprint's open questions)
+
+1. **Goal cards:** the prototype's duplicate "Gain muscle" is resolved into four
+   distinct goals — Lose weight / Maintain / Gain muscle / Gain weight.
+2. **Palette:** the app's indigo theme is canonical; the marketing landing keeps
+   its navy/mint surface, scoped to `.mb-landing`.
+3. **State:** Zustand (persisted) for auth and metrics.
+4. **ML model:** a transparent baseline scorer ships now; the trained model
+   loads later behind the same `RecommendationService` API.
+
+See `backend/README.md` for the API surface and backend architecture.

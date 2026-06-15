@@ -1,5 +1,13 @@
-// Shell for authenticated app routes. The full sidenav (ported from the
-// recommendations prototype) is built in M2; this keeps the group cohesive now.
+import { Sidenav } from "@/components/layout/Sidenav";
+
+// Authenticated app shell: persistent sidenav + scrollable content area.
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  return <div style={{ minHeight: "100vh", background: "var(--cream)" }}>{children}</div>;
+  return (
+    <div className="min-h-screen bg-cream">
+      <Sidenav />
+      <div className="lg:pl-64">
+        <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8">{children}</div>
+      </div>
+    </div>
+  );
 }

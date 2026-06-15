@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { api, BACKEND_READY } from "@/lib/api";
+import { api, BACKEND_READY, normalizeUser } from "@/lib/api";
 import { setCookie, deleteCookie } from "@/lib/utils";
 import type { AuthTokens, User } from "@/types";
 import type { RegisterValues, LoginValues } from "@/schemas/auth";
@@ -13,6 +13,9 @@ interface AuthState {
   status: "idle" | "loading" | "authenticated";
   register: (values: RegisterValues) => Promise<void>;
   login: (values: LoginValues) => Promise<void>;
+  updateProfile: (
+    patch: Partial<Pick<User, "firstName" | "lastName" | "department">>
+  ) => Promise<void>;
   logout: () => void;
 }
 
@@ -35,9 +38,16 @@ export const useAuthStore = create<AuthState>()(
         let tokens: AuthTokens;
         let user: User;
         if (BACKEND_READY) {
-          const { data } = await api.post("/auth/register", values);
+          const { data } = await api.post("/auth/register", {
+            first_name: values.firstName,
+            last_name: values.lastName,
+            student_id: values.studentId,
+            email: values.email,
+            department: values.department,
+            password: values.password,
+          });
           tokens = data.tokens;
-          user = data.user;
+          user = normalizeUser(data.user);
         } else {
           await new Promise((r) => setTimeout(r, 900));
           tokens = mockTokens();
@@ -63,7 +73,7 @@ export const useAuthStore = create<AuthState>()(
         if (BACKEND_READY) {
           const { data } = await api.post("/auth/login", values);
           tokens = data.tokens;
-          user = data.user;
+          user = normalizeUser(data.user);
         } else {
           await new Promise((r) => setTimeout(r, 800));
           tokens = mockTokens();
@@ -80,6 +90,19 @@ export const useAuthStore = create<AuthState>()(
         }
         setCookie("mb_access", tokens.access);
         set({ user, tokens, status: "authenticated" });
+      },
+
+      updateProfile: async (patch) => {
+        if (BACKEND_READY) {
+          await api.patch("/accounts/me/profile", {
+            first_name: patch.firstName,
+            last_name: patch.lastName,
+            department: patch.department,
+          });
+        } else {
+          await new Promise((r) => setTimeout(r, 500));
+        }
+        set((state) => ({ user: state.user ? { ...state.user, ...patch } : state.user }));
       },
 
       logout: () => {
