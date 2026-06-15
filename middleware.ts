@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// Route-guard skeleton. The auth cookie is set once M4 wires real JWT;
-// for now the (app) group is reachable so you can click through the flow.
+// Route guard. The `mb_access` cookie is set on register/login (both mock and
+// real-JWT modes), so the (app) group is protected and authenticated users are
+// bounced away from /auth.
 const PROTECTED = ["/dashboard", "/onboarding", "/foods", "/history", "/goal", "/settings", "/profile"];
 
 export function middleware(req: NextRequest) {
@@ -14,8 +15,10 @@ export function middleware(req: NextRequest) {
   if (pathname.startsWith("/auth") && token) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
-  // Guard enforcement is enabled in M4 (kept open now to keep the flow clickable):
-  // if (isProtected && !token) return NextResponse.redirect(new URL("/auth", req.url));
+  // Unauthenticated access to the guarded group → /auth.
+  if (isProtected && !token) {
+    return NextResponse.redirect(new URL("/auth", req.url));
+  }
   return NextResponse.next();
 }
 

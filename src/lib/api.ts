@@ -27,5 +27,23 @@ api.interceptors.response.use(
   (error) => Promise.reject(error)
 );
 
-/** Flag: real backend calls switch on once NEXT_PUBLIC_API_URL is live (M4). */
-export const BACKEND_READY = false;
+/**
+ * Flag: when true, the stores call the real Django API instead of mock mode.
+ * Driven by env so the frontend runs standalone (mock) by default, and against
+ * the backend simply by setting NEXT_PUBLIC_BACKEND_READY=true.
+ */
+export const BACKEND_READY = process.env.NEXT_PUBLIC_BACKEND_READY === "true";
+
+/** Shape the DRF user payload (snake_case) into the frontend `User` (camelCase). */
+export function normalizeUser(data: Record<string, unknown>) {
+  return {
+    id: String(data.id),
+    firstName: (data.first_name as string) ?? "",
+    lastName: (data.last_name as string) ?? "",
+    email: (data.email as string) ?? "",
+    studentId: (data.student_id as string) ?? "",
+    department: (data.department as string) ?? "",
+    role: (data.role as "user" | "admin" | "super_admin") ?? "user",
+    isEmailVerified: Boolean(data.is_email_verified),
+  };
+}

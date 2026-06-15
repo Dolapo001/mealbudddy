@@ -3,8 +3,22 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { api, BACKEND_READY } from "@/lib/api";
+import { toMetric } from "@/lib/calc";
 import type { MetricsValues } from "@/schemas/metrics";
 import type { MetricsResult } from "@/types";
+
+/** Map the frontend form (with unit toggle) to the backend's metric payload. */
+function toApiPayload(values: MetricsValues) {
+  const { wKg, hCm } = toMetric(values.weight, values.height, values.unit);
+  return {
+    age: values.age,
+    sex: values.sex,
+    weight_kg: Number(wKg.toFixed(1)),
+    height_cm: Number(hCm.toFixed(1)),
+    activity: values.activity,
+    goal: values.goal,
+  };
+}
 
 interface MetricsState {
   metrics: MetricsValues | null;
@@ -29,7 +43,7 @@ export const useMetricsStore = create<MetricsState>()(
       saveMetrics: async (values, result) => {
         set({ status: "saving" });
         if (BACKEND_READY) {
-          await api.post("/metrics", values);
+          await api.post("/metrics", toApiPayload(values));
         } else {
           await new Promise((r) => setTimeout(r, 700));
         }
@@ -42,7 +56,8 @@ export const useMetricsStore = create<MetricsState>()(
         const next = { ...current, goal };
         set({ status: "saving" });
         if (BACKEND_READY) {
-          await api.patch("/metrics", { goal });
+          // A new goal recomputes everything server-side: re-POST the snapshot.
+          await api.post("/metrics", toApiPayload(next));
         } else {
           await new Promise((r) => setTimeout(r, 500));
         }

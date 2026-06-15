@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api, BACKEND_READY } from "@/lib/api";
 import { buildWeeklyPlan } from "@/lib/mock-data";
+import { planFromApi } from "@/lib/transforms";
 import type { DayPlan } from "@/types";
 
 interface UseRecommendations {
@@ -17,18 +18,27 @@ interface UseRecommendations {
  * Returns the weekly recommendation plan. Mock now; the same shape is
  * returned by GET /recommendations once M5 lands.
  */
-export function useRecommendations(recommendationId = "current"): UseRecommendations {
+export function useRecommendations(): UseRecommendations {
   const [plan, setPlan] = useState<DayPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const planId = useRef<string | null>(null);
 
   useEffect(() => {
     let active = true;
     async function load() {
       setLoading(true);
       if (BACKEND_READY) {
-        const { data } = await api.get(`/recommendations/${recommendationId}`);
-        if (active) setPlan(data.plan as DayPlan[]);
+        // Use the active plan if one exists, otherwise generate the first one.
+        try {
+          const { data } = await api.get("/recommendations/current");
+          planId.current = data.id;
+          if (active) setPlan(planFromApi(data));
+        } catch {
+          const { data } = await api.post("/recommendations/generate", {});
+          planId.current = data.id;
+          if (active) setPlan(planFromApi(data));
+        }
       } else {
         await new Promise((r) => setTimeout(r, 900));
         if (active) setPlan(buildWeeklyPlan());
@@ -39,27 +49,24 @@ export function useRecommendations(recommendationId = "current"): UseRecommendat
     return () => {
       active = false;
     };
-  }, [recommendationId]);
+  }, []);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
-    if (BACKEND_READY) {
-      const { data } = await api.post(`/recommendations/${recommendationId}/refresh`);
-      setPlan(data.plan as DayPlan[]);
+    if (BACKEND_READY && planId.current) {
+      const { data } = await api.post(`/recommendations/${planId.current}/refresh`, {});
+      planId.current = data.id;
+      setPlan(planFromApi(data));
     } else {
       await new Promise((r) => setTimeout(r, 1000));
       // Re-shuffle the mock by rotating day order to feel "fresh".
       setPlan((prev) => {
         if (!prev.length) return buildWeeklyPlan();
-        return [...prev.slice(1), prev[0]].map((d, i) => ({
-          ...d,
-          meals: d.meals,
-          day: prev[i].day,
-        }));
+        return prev.map((d, i) => ({ ...d, meals: prev[(i + 1) % prev.length].meals }));
       });
     }
     setRefreshing(false);
-  }, [recommendationId]);
+  }, []);
 
   return { plan, loading, refreshing, refresh };
 }
