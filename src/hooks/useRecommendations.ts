@@ -30,14 +30,20 @@ export function useRecommendations(): UseRecommendations {
       setLoading(true);
       if (BACKEND_READY) {
         // Use the active plan if one exists, otherwise generate the first one.
+        // A brand-new user without metrics yet → leave the plan empty so the
+        // dashboard shows its "add metrics" empty state instead of hanging.
         try {
           const { data } = await api.get("/recommendations/current");
           planId.current = data.id;
           if (active) setPlan(planFromApi(data));
         } catch {
-          const { data } = await api.post("/recommendations/generate", {});
-          planId.current = data.id;
-          if (active) setPlan(planFromApi(data));
+          try {
+            const { data } = await api.post("/recommendations/generate", {});
+            planId.current = data.id;
+            if (active) setPlan(planFromApi(data));
+          } catch {
+            if (active) setPlan([]);
+          }
         }
       } else {
         await new Promise((r) => setTimeout(r, 900));

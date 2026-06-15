@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { api, BACKEND_READY } from "@/lib/api";
 import { toMetric } from "@/lib/calc";
+import { ACTIVITY_OPTIONS } from "@/lib/constants";
 import type { MetricsValues } from "@/schemas/metrics";
 import type { MetricsResult } from "@/types";
 
@@ -30,7 +31,15 @@ interface MetricsState {
   updateGoal: (goal: MetricsValues["goal"], result: MetricsResult) => Promise<void>;
   /** Update dietary / unit preferences (Settings). */
   updatePreferences: (patch: Partial<Pick<MetricsValues, "unit" | "dietary">>) => void;
+  /** Pull the user's current metrics from the backend (returning user). */
+  hydrate: () => Promise<void>;
   reset: () => void;
+}
+
+/** Reverse-map a stored activity multiplier back to its key. */
+function activityKeyFromMultiplier(m: number): MetricsValues["activity"] {
+  const match = ACTIVITY_OPTIONS.find((o) => Math.abs(o.multiplier - m) < 0.001);
+  return match?.key ?? "moderate";
 }
 
 export const useMetricsStore = create<MetricsState>()(
@@ -68,6 +77,35 @@ export const useMetricsStore = create<MetricsState>()(
         const current = get().metrics;
         if (!current) return;
         set({ metrics: { ...current, ...patch } });
+      },
+
+      hydrate: async () => {
+        if (!BACKEND_READY || get().result) return;
+        try {
+          const { data } = await api.get("/metrics/current");
+          const result: MetricsResult = {
+            bmiValue: data.bmi,
+            bmiLabel: data.bmi_category,
+            bmrValue: data.bmr,
+            tdeeValue: data.tdee,
+            targetKcal: data.target_kcal,
+            protein: data.protein_target_g,
+            carbs: data.carb_target_g,
+          };
+          const metrics: MetricsValues = {
+            unit: "metric",
+            age: data.age,
+            sex: data.sex,
+            weight: data.weight_kg,
+            height: data.height_cm,
+            activity: activityKeyFromMultiplier(data.activity_multiplier),
+            goal: data.goal,
+            dietary: [],
+          };
+          set({ metrics, result, status: "saved" });
+        } catch {
+          /* no metrics on file yet — onboarding will create them */
+        }
       },
 
       reset: () => set({ metrics: null, result: null, status: "idle" }),

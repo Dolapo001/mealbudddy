@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useAuthStore } from "@/stores/auth";
@@ -22,7 +22,13 @@ export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
   const metrics = useMetricsStore((s) => s.result);
   const savedMetrics = useMetricsStore((s) => s.metrics);
+  const hydrate = useMetricsStore((s) => s.hydrate);
   const { plan, loading, refreshing, refresh } = useRecommendations();
+
+  // Returning users: pull current metrics from the backend to fill the stat cards.
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
 
   const [activeDay, setActiveDay] = useState("Mon");
   const [selected, setSelected] = useState<Food | null>(null);
