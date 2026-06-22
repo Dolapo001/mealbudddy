@@ -3,7 +3,7 @@ views stay thin and an OAuth adapter can slot in later (per the blueprint).
 """
 from django.db import transaction
 
-from apps.accounts.models import Profile, User
+from apps.accounts.models import User
 from apps.accounts.serializers import tokens_for_user
 from apps.accounts.tokens import (
     make_reset_token,
@@ -21,17 +21,15 @@ class AuthError(Exception):
 class AuthService:
     @staticmethod
     @transaction.atomic
-    def register(*, first_name, last_name, student_id, email, department, password) -> dict:
+    def register(*, first_name, last_name, student_code, email, department, password) -> dict:
         user = User.objects.create_user(
             email=email,
             password=password,
-            student_id=student_id,
+            student_code=student_code,
+            first_name=first_name,
+            last_name=last_name,
+            department=department or ""
         )
-        # Profile is auto-created by signal; fill it in.
-        Profile.objects.filter(user=user).update(
-            first_name=first_name, last_name=last_name, department=department or ""
-        )
-        user.refresh_from_db()
         AuthService.dispatch_verification(user)
         return {"user": user, "tokens": tokens_for_user(user)}
 

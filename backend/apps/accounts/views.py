@@ -9,14 +9,12 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from services.auth_service import AuthError, AuthService
 
-from .models import Profile
 from .serializers import (
     EmailOnlySerializer,
     LoginSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
-    ProfileSerializer,
-    ProfileUpdateSerializer,
+    UserUpdateSerializer,
     RegisterSerializer,
     UserSerializer,
     VerifyEmailSerializer,
@@ -143,10 +141,9 @@ class MyProfileView(generics.RetrieveUpdateAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_object(self):
-        profile, _ = Profile.objects.get_or_create(user=self.request.user)
-        return profile
+        return self.request.user
 
     def get_serializer_class(self):
         if self.request.method in ("PUT", "PATCH"):
-            return ProfileUpdateSerializer
-        return ProfileSerializer
+            return UserUpdateSerializer
+        return UserSerializer

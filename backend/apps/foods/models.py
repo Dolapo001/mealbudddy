@@ -3,57 +3,74 @@ import uuid
 from django.db import models
 
 
-class DietaryTag(models.Model):
+class FoodItem(models.Model):
+    """An entry from the Nigerian Food Composition Table (NFCT)."""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    # Machine key (e.g. "high_protein") + human label.
-    key = models.SlugField(unique=True)
-    label = models.CharField(max_length=60)
+    nfct_code = models.CharField(max_length=20, unique=True)
+    food_name = models.CharField(max_length=150)
+    local_name = models.CharField(max_length=150, null=True, blank=True)
+    food_category = models.CharField(max_length=80, db_index=True)
+
+    energy_kcal = models.DecimalField(max_digits=7, decimal_places=2)
+    carbohydrate_g = models.DecimalField(max_digits=7, decimal_places=2, default=0)
+    protein_g = models.DecimalField(max_digits=7, decimal_places=2, default=0)
+    fat_g = models.DecimalField(max_digits=7, decimal_places=2, default=0)
+    fibre_g = models.DecimalField(max_digits=7, decimal_places=2, null=True, blank=True)
+    sugar_g = models.DecimalField(max_digits=7, decimal_places=2, null=True, blank=True)
+
+    sodium_mg = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    iron_mg = models.DecimalField(max_digits=7, decimal_places=3, null=True, blank=True)
+    calcium_mg = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    vitamin_c_mg = models.DecimalField(max_digits=7, decimal_places=2, null=True, blank=True)
+    vitamin_a_ug = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+
+    # Boolean flags
+    is_high_protein = models.BooleanField(default=False)
+    is_high_fibre = models.BooleanField(default=False)
+    is_low_calorie = models.BooleanField(default=False)
+
+    nfct_edition = models.PositiveSmallIntegerField(default=2)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["label"]
+        db_table = "food_items"
+        indexes = [
+            models.Index(fields=["food_category"]),
+        ]
 
     def __str__(self) -> str:
-        return self.label
+        return f"{self.nfct_code} - {self.food_name}"
 
 
-class Food(models.Model):
-    """An entry from the Nigerian Food Composition Table (NFCT)."""
-
+class BowenFood(models.Model):
+    """The 38 foods available at Bowen University."""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    slug = models.SlugField(unique=True)
-    name = models.CharField(max_length=160, db_index=True)
-    nfct_code = models.CharField(max_length=32, unique=True, null=True, blank=True)
-    origin = models.CharField(max_length=80, default="Nigeria")
-    emoji = models.CharField(max_length=8, default="🍽️")
-    description = models.TextField(blank=True)
-    serving_size = models.CharField(max_length=80, blank=True)
+    food_name = models.CharField(max_length=150)
+    nfct_food = models.ForeignKey(FoodItem, on_delete=models.SET_NULL, null=True, related_name="bowen_foods")
+    food_category = models.CharField(max_length=80, db_index=True)
+    
+    # Stored as comma-separated values
+    meal_time = models.CharField(max_length=100, default="lunch,dinner")
+    
+    is_vegetarian = models.BooleanField(default=False)
+    contains_gluten = models.BooleanField(default=False)
+    contains_nuts = models.BooleanField(default=False)
+    contains_pork = models.BooleanField(default=False)
+    contains_fish = models.BooleanField(default=False)
+    contains_lactose = models.BooleanField(default=False)
 
-    # Per-serving macros.
-    kcal = models.PositiveIntegerField()
-    protein_g = models.FloatField(default=0)
-    carbs_g = models.FloatField(default=0)
-    fat_g = models.FloatField(default=0)
-
-    tags = models.ManyToManyField(DietaryTag, through="FoodTagMap", related_name="foods", blank=True)
+    is_available = models.BooleanField(default=True)
+    availability_note = models.CharField(max_length=150, null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["name"]
+        db_table = "bowen_foods"
         indexes = [
-            models.Index(fields=["name"]),
-            models.Index(fields=["nfct_code"]),
+            models.Index(fields=["food_category"]),
+            models.Index(fields=["is_available"]),
         ]
 
     def __str__(self) -> str:
-        return self.name
-
-
-class FoodTagMap(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    food = models.ForeignKey(Food, on_delete=models.CASCADE)
-    tag = models.ForeignKey(DietaryTag, on_delete=models.CASCADE)
-
-    class Meta:
-        unique_together = ("food", "tag")
+        return self.food_name

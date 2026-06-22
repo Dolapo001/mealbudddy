@@ -2,39 +2,27 @@ from django.contrib.auth import authenticate, password_validation
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import Profile, User
-
-
-class ProfileSerializer(serializers.ModelSerializer):
-    full_name = serializers.CharField(read_only=True)
-
-    class Meta:
-        model = Profile
-        fields = ["id", "first_name", "last_name", "department", "full_name"]
-        read_only_fields = ["id"]
+from .models import User
 
 
 class UserSerializer(serializers.ModelSerializer):
-    profile = ProfileSerializer(read_only=True)
-    first_name = serializers.CharField(source="profile.first_name", read_only=True)
-    last_name = serializers.CharField(source="profile.last_name", read_only=True)
-    department = serializers.CharField(source="profile.department", read_only=True)
+    full_name = serializers.CharField(read_only=True)
 
     class Meta:
         model = User
         fields = [
             "id",
             "email",
-            "student_id",
+            "student_code",
             "role",
             "is_email_verified",
             "first_name",
             "last_name",
+            "full_name",
             "department",
-            "profile",
             "created_at",
         ]
-        read_only_fields = fields
+        read_only_fields = ["id", "role", "is_email_verified", "created_at", "full_name"]
 
 
 def tokens_for_user(user) -> dict:
@@ -45,7 +33,7 @@ def tokens_for_user(user) -> dict:
 class RegisterSerializer(serializers.Serializer):
     first_name = serializers.CharField(max_length=80)
     last_name = serializers.CharField(max_length=80)
-    student_id = serializers.CharField(max_length=64)
+    student_code = serializers.CharField(max_length=30)
     email = serializers.EmailField()
     department = serializers.CharField(max_length=120, required=False, allow_blank=True)
     password = serializers.CharField(write_only=True, min_length=8)
@@ -56,9 +44,9 @@ class RegisterSerializer(serializers.Serializer):
             raise serializers.ValidationError("An account with this email already exists.")
         return value
 
-    def validate_student_id(self, value):
-        if User.objects.filter(student_id=value).exists():
-            raise serializers.ValidationError("This student ID is already registered.")
+    def validate_student_code(self, value):
+        if User.objects.filter(student_code=value).exists():
+            raise serializers.ValidationError("This student code is already registered.")
         return value
 
     def validate_password(self, value):
@@ -67,7 +55,7 @@ class RegisterSerializer(serializers.Serializer):
 
 
 class LoginSerializer(serializers.Serializer):
-    # `identifier` accepts either email or student_id (matches the frontend).
+    # `identifier` accepts either email or student_code (matches the frontend).
     identifier = serializers.CharField()
     password = serializers.CharField(write_only=True)
 
@@ -76,7 +64,7 @@ class LoginSerializer(serializers.Serializer):
         lookup = (
             {"email": identifier.lower()}
             if "@" in identifier
-            else {"student_id": identifier}
+            else {"student_code": identifier}
         )
         try:
             user = User.objects.get(**lookup)
@@ -114,7 +102,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         return value
 
 
-class ProfileUpdateSerializer(serializers.ModelSerializer):
+class UserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Profile
+        model = User
         fields = ["first_name", "last_name", "department"]

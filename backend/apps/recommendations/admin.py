@@ -1,17 +1,17 @@
 from django.contrib import admin
+from .models import MLModel, Recommendation, RecommendationItem, MealPlan, MealPlanItem
 
-from .models import MealPlan, MealPlanItem
+@admin.register(MLModel)
+class MLModelAdmin(admin.ModelAdmin): pass
 
+@admin.register(Recommendation)
+class RecommendationAdmin(admin.ModelAdmin): pass
 
-class MealPlanItemInline(admin.TabularInline):
-    model = MealPlanItem
-    extra = 0
-    raw_id_fields = ("food",)
-
+@admin.register(RecommendationItem)
+class RecommendationItemAdmin(admin.ModelAdmin): pass
 
 @admin.register(MealPlan)
-class MealPlanAdmin(admin.ModelAdmin):
-    list_display = ("user", "week_start", "status", "target_kcal", "created_at")
-    list_filter = ("status",)
-    search_fields = ("user__email",)
-    inlines = [MealPlanItemInline]
+class MealPlanAdmin(admin.ModelAdmin): pass
+
+@admin.register(MealPlanItem)
+class MealPlanItemAdmin(admin.ModelAdmin): pass

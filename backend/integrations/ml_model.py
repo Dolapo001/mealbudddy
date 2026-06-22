@@ -43,25 +43,34 @@ class BaselineScorer:
 
     MEAL_SHARE = {"breakfast": 0.25, "lunch": 0.35, "dinner": 0.30, "snack": 0.10}
 
-    def score(self, food, ctx: ScoringContext, meal_time: str) -> float:
+    def score(self, bowen_food, ctx: ScoringContext, meal_time: str) -> float:
         score = 50.0
-        food_tags = {t.label for t in food.tags.all()} if hasattr(food, "tags") else set()
 
-        if ctx.dietary_tags:
-            matched = ctx.dietary_tags & food_tags
-            score += 8 * len(matched)
-            for exclusive in ("vegan", "vegetarian", "halal"):
-                if exclusive in ctx.dietary_tags and exclusive not in food_tags:
-                    score -= 25
+        if "vegetarian" in ctx.dietary_tags and not bowen_food.is_vegetarian:
+            score -= 50
+        if "no_pork" in ctx.dietary_tags and bowen_food.contains_pork:
+            score -= 50
+        if "no_fish" in ctx.dietary_tags and bowen_food.contains_fish:
+            score -= 50
+        if "gluten_free" in ctx.dietary_tags and bowen_food.contains_gluten:
+            score -= 50
+        if "lactose_free" in ctx.dietary_tags and bowen_food.contains_lactose:
+            score -= 50
+        if "nut_allergy" in ctx.dietary_tags and bowen_food.contains_nuts:
+            score -= 50
+
+        nfct = bowen_food.nfct_food
+        if not nfct:
+            return 0.0
 
         if ctx.goal_offset_kcal > 0:
-            score += min(20, food.protein_g * 0.6)
+            score += min(20, float(nfct.protein_g) * 0.6)
         elif ctx.goal_offset_kcal < 0:
-            score += max(-15, (400 - food.kcal) * 0.03)
+            score += max(-15, (400 - float(nfct.energy_kcal)) * 0.03)
 
         ideal = ctx.target_kcal * self.MEAL_SHARE.get(meal_time, 0.25)
         if ideal > 0:
-            fit = 1 - min(1.0, abs(food.kcal - ideal) / ideal)
+            fit = 1 - min(1.0, abs(float(nfct.energy_kcal) - ideal) / ideal)
             score += 20 * fit
 
         return round(max(0.0, min(100.0, score)), 2)
