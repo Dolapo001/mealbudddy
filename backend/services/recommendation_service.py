@@ -15,6 +15,7 @@ from apps.foods.models import Food
 from apps.metrics.models import MetricProfile
 from apps.recommendations.models import MealPlan, MealPlanItem
 from integrations.ml_model import ScoringContext, get_scorer
+from services.metrics_service import MetricsService
 
 DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 MEAL_TIMES = ["breakfast", "lunch", "dinner", "snack"]
@@ -43,6 +44,8 @@ class RecommendationService:
             protein_target_g=metrics.protein_target_g,
             goal_offset_kcal=metrics.goal_offset_kcal,
             dietary_tags=dietary,
+            bmi_category=MetricsService.bmi_category(metrics.bmi),
+            goal=metrics.goal,
         )
         scorer = get_scorer()
         foods = list(Food.objects.prefetch_related("tags").all())

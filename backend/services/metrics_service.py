@@ -51,6 +51,18 @@ class MetricsService:
 
     @staticmethod
     def bmi_category(value: float) -> str:
+        """Return the WHO-defined BMI weight category for *value*.
+
+        Rule-based classification is intentionally kept here instead of an ML
+        model.  BMI categories are international medical thresholds (WHO, 2000),
+        not a distribution to learn: the four boundaries are fixed constants,
+        not patterns.  An ML classifier trained to reproduce them would add
+        latency and opacity for zero accuracy gain over this O(1) lookup.
+
+        The ML model in ml/services/food_scorer.py uses the *result* of this
+        function as an input feature for food-recommendation scoring — a
+        separate and genuinely non-linear problem where ML adds real value.
+        """
         if value < 18.5:
             return "Underweight"
         if value < 25:
