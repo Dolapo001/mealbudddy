@@ -10,12 +10,23 @@ export const api = axios.create({
 // Attach the access token (read lazily to avoid SSR window access).
 api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
-    try {
-      const raw = localStorage.getItem("mb-auth");
-      const token = raw ? JSON.parse(raw)?.state?.tokens?.access : null;
-      if (token) config.headers.Authorization = `Bearer ${token}`;
-    } catch {
-      /* no-op */
+    const isPublicAuthRoute = [
+      "/auth/login",
+      "/auth/register",
+      "/auth/password/forgot",
+      "/auth/password/reset",
+      "/auth/verify-email",
+      "/auth/resend-verification"
+    ].some(route => config.url?.includes(route));
+
+    if (!isPublicAuthRoute) {
+      try {
+        const raw = localStorage.getItem("mb-auth");
+        const token = raw ? JSON.parse(raw)?.state?.tokens?.access : null;
+        if (token) config.headers.Authorization = `Bearer ${token}`;
+      } catch {
+        /* no-op */
+      }
     }
   }
   return config;
@@ -24,7 +35,15 @@ api.interceptors.request.use((config) => {
 // Refresh-on-401 is wired in M4 once the refresh endpoint exists.
 api.interceptors.response.use(
   (res) => res,
-  (error) => Promise.reject(error)
+  (error) => {
+    if (error.response?.status === 401) {
+      if (typeof window !== "undefined") {
+        // Clear the broken auth state so it doesn't loop forever.
+        localStorage.removeItem("mb-auth");
+      }
+    }
+    return Promise.reject(error);
+  }
 );
 
 /**
