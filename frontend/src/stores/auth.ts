@@ -41,7 +41,7 @@ export const useAuthStore = create<AuthState>()(
           const { data } = await api.post("/auth/register", {
             first_name: values.firstName,
             last_name: values.lastName,
-            student_id: values.studentId,
+            student_code: values.studentId,
             email: values.email,
             department: values.department,
             password: values.password,

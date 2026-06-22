@@ -60,7 +60,7 @@ export function normalizeUser(data: Record<string, unknown>) {
     firstName: (data.first_name as string) ?? "",
     lastName: (data.last_name as string) ?? "",
     email: (data.email as string) ?? "",
-    studentId: (data.student_id as string) ?? "",
+    studentId: (data.student_code as string) ?? "",
     department: (data.department as string) ?? "",
     role: (data.role as "user" | "admin" | "super_admin") ?? "user",
     isEmailVerified: Boolean(data.is_email_verified),
