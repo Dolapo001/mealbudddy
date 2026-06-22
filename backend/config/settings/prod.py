@@ -4,6 +4,9 @@ from .base import env
 
 DEBUG = False
 
+if env("RENDER_EXTERNAL_HOSTNAME", default=None):
+    ALLOWED_HOSTS.append(env("RENDER_EXTERNAL_HOSTNAME"))
+
 # Security headers (per security brief).
 SECURE_SSL_REDIRECT = env("SECURE_SSL_REDIRECT", default=True)
 SECURE_HSTS_SECONDS = env("SECURE_HSTS_SECONDS", default=31536000)
