@@ -102,7 +102,7 @@ export default function MetricsPage() {
 
             <div className="mt-5 grid grid-cols-2 gap-4">
               <Field label="Age" error={errors.age?.message}>
-                <input type="number" {...register("age")} className="mb-input" placeholder="22" />
+                <input type="number" {...register("age", { valueAsNumber: true })} className="mb-input" placeholder="22" />
               </Field>
               <Field label="Sex" error={errors.sex?.message}>
                 <select {...register("sex")} className="mb-input">
@@ -114,7 +114,7 @@ export default function MetricsPage() {
                 <input
                   type="number"
                   step="any"
-                  {...register("weight")}
+                  {...register("weight", { valueAsNumber: true })}
                   className="mb-input"
                   placeholder={unit === "metric" ? "72" : "159"}
                 />
@@ -123,7 +123,7 @@ export default function MetricsPage() {
                 <input
                   type="number"
                   step="any"
-                  {...register("height")}
+                  {...register("height", { valueAsNumber: true })}
                   className="mb-input"
                   placeholder={unit === "metric" ? "178" : "70"}
                 />
